@@ -1,0 +1,33 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/3/a/RAM64.hdl
+/**
+ * Memory of sixty four 16-bit registers.
+ * If load is asserted, the value of the register selected by
+ * address is set to in; Otherwise, the value does not change.
+ * The value of the selected register is emitted by out.
+ */
+CHIP RAM64 {
+    IN in[16], load, address[6];
+    OUT out[16];
+
+    PARTS:
+    // Sends load (1 or 0) to MSB triad address and 0 to rest
+    DMux8Way(in=load, sel=address[3..5], a=r0, b=r1, c=r2, 
+    d=r3, e=r4, f=r5, g=r6, h=r7);
+
+    // Sends 0 to all except address, which gets load (0 or 1)
+    RAM8(in=in, load=r0, address=address[0..2], out=mux0);
+    RAM8(in=in, load=r1, address=address[0..2], out=mux1);
+    RAM8(in=in, load=r2, address=address[0..2], out=mux2);
+    RAM8(in=in, load=r3, address=address[0..2], out=mux3);
+    RAM8(in=in, load=r4, address=address[0..2], out=mux4);
+    RAM8(in=in, load=r5, address=address[0..2], out=mux5);
+    RAM8(in=in, load=r6, address=address[0..2], out=mux6);
+    RAM8(in=in, load=r7, address=address[0..2], out=mux7);
+
+    // Selects the output from the selected RAM8 to output
+    Mux8Way16(a=mux0, b=mux1, c=mux2, d=mux3, e=mux4, 
+    f=mux5, g=mux6, h=mux7, sel= address[3..5], out=out);
+}
