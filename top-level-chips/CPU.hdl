@@ -1,0 +1,84 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/5/CPU.hdl
+/**
+ * The Hack Central Processing unit (CPU).
+ * Parses the binary code in the instruction input and executes it according to the
+ * Hack machine language specification. In the case of a C-instruction, computes the
+ * function specified by the instruction. If the instruction specifies to read a memory
+ * value, the inM input is expected to contain this value. If the instruction specifies
+ * to write a value to the memory, sets the outM output to this value, sets the addressM
+ * output to the target address, and asserts the writeM output (when writeM = 0, any
+ * value may appear in outM).
+ * If the reset input is 0, computes the address of the next instruction and sets the
+ * pc output to that value. If the reset input is 1, sets pc to 0.
+ * Note: The outM and writeM outputs are combinational: they are affected by the
+ * instruction's execution during the current cycle. The addressM and pc outputs are
+ * clocked: although they are affected by the instruction's execution, they commit to
+ * their new values only in the next cycle.
+ */
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+
+    // Selects between the instruction or the ALU output sent to the A register
+    // Determined by the 'A' destination bit and the i-bit
+    And(a=instruction[5], b=instruction[15], out=ARegMuxSel);
+    Mux16(a=instruction, b=fanALUout, sel=ARegMuxSel, out=toARegister);
+
+    // A-instruction if i-bit is 0, otherwise C-instruction
+    // Load the A-register if A-instruction or C-instruction with A dest-bit = 1
+    Not(in=instruction[15], out=AInstruction);
+    Or(a=AInstruction, b=ARegMuxSel, out=loadARegister);
+
+    // Sends the output to the ALU Mux and the PC
+	ARegister(in=toARegister, load=loadARegister, out=fromARegister, 
+            out[0..14]=addressM);
+
+    // If it is a C-instruction, and the M destination bit is 1, set writeM to 1
+    And(a =instruction[3], b =instruction[15], out =writeM);
+
+    // Selects either the A register input or M input to go to the ALU
+    Mux16(a=fromARegister, b=inM, sel=instruction[12], out=AorMinput);
+
+    // Recieves D as the x-input and A or M as the y-input 
+    ALU(x=fromDRegister, y=AorMinput, zx=instruction[11], nx=instruction[10], 
+        zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], 
+        out=outM, out=fanALUout, zr=ALUzr, ng= ALUng);
+
+    // Load the D register when C-instruction and 'D' destination bit is 1
+    And(a=instruction[4], b=instruction[15], out=loadDRegister);
+
+    // Loads the ALU output if the 'D' destination bit is 1
+    DRegister(in=fanALUout, load=loadDRegister, out=fromDRegister);
+
+    // Starts at 0, reset returns to 0. If assertJump, goes to the number
+    // at in, otherwise increments by 1
+    PC(in=fromARegister, load=assertJump, inc=true, reset=reset,
+     out[0..14]=pc);
+
+    // Handles jump logic, if it is a C-instruction:
+    // j1 jumps if ng = 1, j2 jumps if zr = 1, j3 jumps if ng = 0 & zr = 0
+    Not(in=ALUng, out=ALUnotNeg);
+    Not(in=ALUzr, out=ALUnotZero);
+    And(a=instruction[2], b=ALUng, out=j1Andng);
+    And(a=instruction[1], b=ALUzr, out=j2Andzr);
+    And(a=instruction[0], b=ALUnotNeg, out=j3AndNotNeg);
+    And(a=j3AndNotNeg, b=ALUnotZero, out=j3Andpos);
+    Or(a=j1Andng, b=j2Andzr, out=j1Orj2);
+    Or(a=j1Orj2, b=j3Andpos, out=passJumpCriteria);
+    // Last gate checks that the jump criteria passed AND it is a C-instruction
+    And(a=passJumpCriteria, b=instruction[15], out=assertJump);
+}
