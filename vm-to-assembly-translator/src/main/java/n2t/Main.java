@@ -26,7 +26,7 @@ public class Main {
   */
   public static void main(String[] args) {
     // Check that the .vm file path is provided
-    if (args.length != 1) {
+    if (args.length != 1 || !args[0].endsWith(".vm")) {
       System.out.println("Usage: java n2t.Main 'file.vm'");
       return;
     }

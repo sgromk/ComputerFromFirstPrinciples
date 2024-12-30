@@ -1,12 +1,12 @@
-package n2t;
+package n2t.commands;
 
 /**
  * Consolidates the common fields of all VM commands.
  */
-public class CommonCommand implements CommandType {
-  private String commandType;
-  private String arg1;
-  private String arg2;
+public abstract class CommonCommand implements CommandType {
+  protected String commandType;
+  protected String arg1;
+  protected String arg2;
 
   /**
    * Constructor for the CommonCommand class.
@@ -15,8 +15,8 @@ public class CommonCommand implements CommandType {
    */
   public CommonCommand(String[] args) {
     this.commandType = args[0];
-    this.arg1 = args[1];
-    this.arg2 = args[2];
+    this.arg1 = args.length > 1 ? args[1] : null; // Set to null if no arg1 exists
+    this.arg2 = args.length > 2 ? args[2] : null; // Set to null if no arg2 exists
   }
 
   @Override

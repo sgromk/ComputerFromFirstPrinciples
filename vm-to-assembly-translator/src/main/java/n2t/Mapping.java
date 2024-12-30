@@ -2,6 +2,17 @@ package n2t;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
+import n2t.commands.Arithmetic;
+import n2t.commands.CommandCall;
+import n2t.commands.CommandFunction;
+import n2t.commands.CommandIf;
+import n2t.commands.CommandReturn;
+import n2t.commands.CommandType;
+import n2t.commands.Goto;
+import n2t.commands.Label;
+import n2t.commands.Pop;
+import n2t.commands.Push;
 
 /**
  * Holds the standard VM mapping for the Hack computer.
@@ -9,48 +20,43 @@ import java.util.Map;
 public class Mapping {
   Mapping() {}
 
-  private static final Map<String, Integer> vmMap = new HashMap<String, Integer>() {
-    {
-      put("SP", 0);
-      put("LCL", 1);
-      put("ARG", 2);
-      put("THIS", 3);
-      put("THAT", 4);
-    }
-  };
-
   /**
-   * Returns the CommandType corresponding to the given line.
+   * Returns a new {@code CommandType} corresponding to the given line.
    *
-   * @param command the VM line elements
+   * @param commandElements the VM line elements
    * @return the mapped value of the given VM segment
    */
-  public static CommandType getCommand(String[] command) {
+  public static CommandType getCommand(String[] commandElements) {
+    Function<String[], CommandType> commandConstructor = COMMAND_MAP.get(commandElements[0]);
 
-    Map<String, CommandType> commandMap = new HashMap<String, CommandType>() {
-      {
-        put("add", new Arithmetic(command));
-        put("sub", new Arithmetic(command));
-        put("neg", new Arithmetic(command));
-        put("eq", new Arithmetic(command));
-        put("gt", new Arithmetic(command));
-        put("lt", new Arithmetic(command));
-        put("and", new Arithmetic(command));
-        put("or", new Arithmetic(command));
-        put("not", new Arithmetic(command));
-        put("push", new Push(command));
-        put("pop", new Pop(command));
-        put("label", new Label(command));
-        put("goto", new Goto(command));
-        put("if", new If(command));
-        put("function", new Function(command));
-        put("call", new Call(command));
-        put("return", new Return(command));
-      }
-    };
-
-    return commandMap.get(command[0]);
+    if (commandConstructor == null) {
+      throw new IllegalArgumentException("VM Code contains illegal command type: " 
+      + commandElements[0]);
+    }
+    return COMMAND_MAP.get(commandElements[0]).apply(commandElements);
   }
 
-
+  // A map of each command type to its corresponding constructor
+  private static final Map<String, Function<String[], CommandType>> COMMAND_MAP
+      = new HashMap<String, Function<String[], CommandType>>() {
+        {
+          put("add", Arithmetic::new);
+          put("sub", Arithmetic::new);
+          put("neg", Arithmetic::new);
+          put("eq", Arithmetic::new);
+          put("gt", Arithmetic::new);
+          put("lt", Arithmetic::new);
+          put("and", Arithmetic::new);
+          put("or", Arithmetic::new);
+          put("not", Arithmetic::new);
+          put("push", Push::new);
+          put("pop", Pop::new);
+          put("label", Label::new);
+          put("goto", Goto::new);
+          put("if", CommandIf::new);
+          put("function", CommandFunction::new);
+          put("call", CommandCall::new);
+          put("return", CommandReturn::new);
+        }
+      };
 }

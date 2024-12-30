@@ -1,5 +1,7 @@
 package n2t;
 
+import n2t.commands.CommandType;
+
 /**
  * Parses each VM command, an entire line from the input file,
  * into the separate valid elements, to be given to the
@@ -18,14 +20,14 @@ public class Parser {
    *
    * @param currentLine the line of VM code to be parsed
    */
-  public String[] parse(String currentLine) {
+  public CommandType parse(String currentLine) {
     String codingLine = getCodingSegment(currentLine);
 
     // If the line is empty, return an empty array
     if (codingLine.isEmpty()) {
-      return new String[] {};
+      return null;
     } else {
-      return new String[] {" ", ""};
+      return Mapping.getCommand(codingLine.split("\\s+"));
     }
   }
 
