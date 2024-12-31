@@ -1,5 +1,6 @@
 package n2t.commands;
 
+import java.io.IOException;
 import n2t.CodeWriter;
 
 /**
@@ -30,5 +31,13 @@ public interface CommandType {
   /**
    * Calls the corresponding CodeWriter method to write the command.
    */
-  public void writeCommand(CodeWriter writer);
+  public void writeCommand(CodeWriter writer) throws IOException;
+
+  /**
+   * Returns the original line of the command composed of the 
+   * command type, arg1, arg2, if they exist.
+   *
+   * @return the original line of the command as a String
+   */
+  public String getOriginalLine();
 }

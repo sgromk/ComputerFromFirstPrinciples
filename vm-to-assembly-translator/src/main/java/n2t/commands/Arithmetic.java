@@ -1,5 +1,6 @@
 package n2t.commands;
 
+import java.io.IOException;
 import n2t.CodeWriter;
 
 /**
@@ -22,7 +23,7 @@ public class Arithmetic extends CommonCommand {
    *
    * @param codeWriter the {@code CodeWriter} to write the command
    */
-  public void writeCommand(CodeWriter codeWriter) {
+  public void writeCommand(CodeWriter codeWriter) throws IOException {
     codeWriter.writeArithmetic(this);
   }
 }

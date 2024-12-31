@@ -28,10 +28,12 @@ public class Main {
     // Check that the .vm file path is provided
     if (args.length != 1 || !args[0].endsWith(".vm")) {
       System.out.println("Usage: java n2t.Main 'file.vm'");
-      return;
+      // return; TODO: debug line
     }
 
-    String inPath = args[0];
+    // String inPath = args[0]; // TODO: Debug line
+    // Debug line
+    String inPath = "C:\\DevFiles\\N2T\\ComputerFromFirstPrinciples\\BasicTest\\BasicTest.vm";
 
     // Create the .asm output file path
     String outPath = inPath.replaceAll("\\.\\w+$", ".asm");
@@ -50,8 +52,8 @@ public class Main {
         String currentLine = scan.nextLine();
         codeWriter.write(parser.parse(currentLine));
       }
-
       scan.close();
+      codeWriter.close();
       
     } catch (Exception e) {
       System.out.println("Error translating file: " + e);

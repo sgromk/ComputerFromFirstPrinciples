@@ -29,12 +29,58 @@ public class CodeWriter {
    *
    * @param command the VM command object that knows which CodeWriter method to call to write itself
    */
-  public void write(CommandType command) {
+  public void write(CommandType command) throws IOException {
     if (command == null) {
       return;
     } else {
-      command.writeCommand(this);
+      try {
+        writer.write("// " + command.getOriginalLine() + "\n"); // Write VM code line as a comment
+        command.writeCommand(this);
+      } catch (Exception e) {
+        System.out.println("Error writing command to file: " + e);
+      }
+
     }
+  }
+
+  /**
+   * Closes the output file.
+   *
+   * @throws IOException if the file cannot be closed
+   */
+  public void close() throws IOException {
+    writer.close();
+  }
+
+  /**
+   * Writes the assembly code to incremenent the stack pointer.
+   *
+   * @throws IOException if the assembly code cannot be written
+   */
+  private void incrementStack() throws IOException {
+    writer.write("@0\n");
+    writer.write("M=M+1\n");
+  }
+
+  /**
+   * Writes the assembly code to decrement the stack pointer.
+   *
+   * @throws IOException if the assembly code cannot be written
+   */
+  private void decrementStack() throws IOException {
+    writer.write("@0\n");
+    writer.write("M=M-1\n");
+  }
+
+  // TODO: Fix logic, needs to go to address first, then add index to segment
+  /**
+   * Convenience method to get the stack address for the given command.
+   *
+   * @param command the command to get the stack address for
+   * @return the stack address as a string
+   */
+  private String getStackAddress(CommandType command) {
+    return "@" + Mapping.calcStackAddress(command.arg1(), command.arg2());
   }
 
   /**
@@ -42,7 +88,7 @@ public class CodeWriter {
    *
    * @param command the arithmetic command
    */
-  public void writeArithmetic(CommandType command) {
+  public void writeArithmetic(CommandType command) throws IOException {
     // Existing writeArithmetic logic
   }
 
@@ -51,8 +97,25 @@ public class CodeWriter {
    *
    * @param command the push or pop command
    */
-  public void writePushPop(CommandType command) {
-    // Existing writePushPop logic
+  public void writePush(CommandType command) throws IOException {
+    writer.write(getStackAddress(command) + "\n");  // @address
+    writer.write("D=M\n");                      // D = *address
+    writer.write("@0\n");                       // A = 0
+    writer.write("A=M\n");                      // A = *0
+    incrementStack();                               // *0++
+  }
+
+  /**
+   * Writes the assembly code for the given pop command.
+   *
+   * @param command the pop command
+   */
+  public void writePop(CommandType command) throws IOException {
+    decrementStack();
+    writer.write("A=M\n");                      // A = *0
+    writer.write("D=M\n");                      // D = *A
+    writer.write(getStackAddress(command) + "\n");  // @address
+    writer.write("M=D\n");                      // *address = D
   }
 
   /**
@@ -60,7 +123,7 @@ public class CodeWriter {
    *
    * @param command the label command
    */
-  public void writeLabel(CommandType command) {
+  public void writeLabel(CommandType command) throws IOException {
     // Existing writeLabel logic
   }
 
@@ -69,7 +132,7 @@ public class CodeWriter {
    *
    * @param command the goto command
    */
-  public void writeGoto(CommandType command) {
+  public void writeGoto(CommandType command) throws IOException {
     // Existing writeGoto logic
   }
 
@@ -78,7 +141,7 @@ public class CodeWriter {
    *
    * @param command the if command
    */
-  public void writeIf(CommandType command) {
+  public void writeIf(CommandType command) throws IOException {
     // Existing writeIf logic
   }
 
@@ -87,7 +150,7 @@ public class CodeWriter {
    *
    * @param command the function command
    */
-  public void writeFunction(CommandType command) {
+  public void writeFunction(CommandType command) throws IOException{
     // Existing writeFunction logic
   }
 
@@ -96,7 +159,7 @@ public class CodeWriter {
    *
    * @param command the call command
    */
-  public void writeReturn(CommandType command) {
+  public void writeReturn(CommandType command) throws IOException {
     // Existing writeReturn logic
   }
 
@@ -105,7 +168,7 @@ public class CodeWriter {
    *
    * @param command the return command
    */
-  public void writeCall(CommandType command) {
+  public void writeCall(CommandType command) throws IOException {
     // Existing writeCall logic
   }
 }

@@ -34,4 +34,8 @@ public abstract class CommonCommand implements CommandType {
     return arg2;
   }
     
+  @Override
+  public String getOriginalLine() {
+    return commandType + (arg1 != null ? " " + arg1 : "") + (arg2 != null ? " " + arg2 : "");
+  }
 }
