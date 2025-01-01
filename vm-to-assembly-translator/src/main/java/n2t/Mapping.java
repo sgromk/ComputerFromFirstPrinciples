@@ -21,38 +21,36 @@ public class Mapping {
   private Mapping() {}
 
   /**
-   * Returns the address within the stack at the given index
-   * within the given stack segment.
+   * Given a segment and index, returns the memory address of the segment[index].
    *
-   * <p>If the segment is "constant", the index itself is returned as the address.
-   *
-   * @param segment the stack segment
-   * @param index the index within the segment
-   * @return the address within the stack at the given index
+   * @param segment the VM segment
+   * @param index the index of the segment
+   * @return the memory address of the segment[index] as a String
    */
-  public static String calcStackAddress(String segment, String index) {
-    if (segment.equals("constant")) {
-      return index;
-    } else {
-      return Integer.toString(STACK.get(segment) + Integer.parseInt(index));
+  public static String accessMemory(String segment, String index, String fileBaseName) {
+    switch (segment) {
+      case "local":
+        return "LCL";
+      case "argument":
+        return "ARG";
+      case "this":
+        return "THIS";
+      case "that":
+        return "THAT";
+      case "pointer":
+        if (index.equals("0")) {
+          return "THIS";
+        } else {
+          return "THAT";
+        }
+      case "temp":
+        return Integer.toString(5 + Integer.parseInt(index));
+      case "static":
+        return fileBaseName + "." + index;
+      default:
+        throw new IllegalArgumentException("Unknown segment: " + segment);
     }
   }
-
-  /**
-   * A map of each VM segment to its corresponding base memory address.
-   */
-  private static final Map<String, Integer> STACK
-      = new HashMap<String, Integer>() {
-        {
-          put("local", 1);
-          put("argument", 2);
-          put("this", 3);
-          put("that", 4);
-          put("temp", 5);
-          put("pointer", 6);
-          put("static", 16);
-        }
-      };
 
   /**
    * Returns a new {@code CommandType} corresponding to the given line.

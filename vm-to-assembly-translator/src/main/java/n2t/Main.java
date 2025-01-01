@@ -2,7 +2,10 @@ package n2t;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Scanner;
+
 
 /**
  * Drives the translation process from virtual machine code to assembly language and
@@ -33,7 +36,11 @@ public class Main {
 
     // String inPath = args[0]; // TODO: Debug line
     // Debug line
-    String inPath = "C:\\DevFiles\\N2T\\ComputerFromFirstPrinciples\\BasicTest\\BasicTest.vm";
+    String inPath = "C:\\DevFiles\\N2T\\BasicTest\\BasicTest.vm";
+
+    Path filePath = Paths.get(inPath);
+    String fileName = filePath.getFileName().toString();
+    String fileBaseName = fileName.substring(0, fileName.lastIndexOf('.'));
 
     // Create the .asm output file path
     String outPath = inPath.replaceAll("\\.\\w+$", ".asm");
@@ -41,7 +48,7 @@ public class Main {
     try {
       // Construct the Parser and CodeWriter
       Parser parser = new Parser();
-      CodeWriter codeWriter = new CodeWriter(outPath);
+      CodeWriter codeWriter = new CodeWriter(outPath, fileBaseName);
 
       InputStream is = new FileInputStream(inPath);
       Scanner scan = new Scanner(is);

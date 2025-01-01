@@ -2,6 +2,7 @@ package n2t;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Set;
 import n2t.commands.CommandType;
 
 /**
@@ -16,9 +17,11 @@ import n2t.commands.CommandType;
  */
 public class CodeWriter {
   FileWriter writer;
+  String fileBaseName;
 
-  CodeWriter(String outPath) throws IOException {
+  CodeWriter(String outPath, String fileBaseName) throws IOException {
     this.writer = new FileWriter(outPath);
+    this.fileBaseName = fileBaseName;
   } 
 
   /**
@@ -34,12 +37,11 @@ public class CodeWriter {
       return;
     } else {
       try {
-        writer.write("// " + command.getOriginalLine() + "\n"); // Write VM code line as a comment
+        writeLine("// " + command.getOriginalLine()); // Write VM code line as a comment
         command.writeCommand(this);
       } catch (Exception e) {
         System.out.println("Error writing command to file: " + e);
       }
-
     }
   }
 
@@ -53,13 +55,25 @@ public class CodeWriter {
   }
 
   /**
+   * Helper function to reduce visual clutter in each write method
+   * by moving the call to {@code FileWriter} and the newline character
+   * to a separate method.
+   *
+   * @param line the line to write to the output file
+   * @throws IOException if the line cannot be written
+   */
+  private void writeLine(String line) throws IOException {
+    writer.write(line + "\n");
+  }
+
+  /**
    * Writes the assembly code to incremenent the stack pointer.
    *
    * @throws IOException if the assembly code cannot be written
    */
   private void incrementStack() throws IOException {
-    writer.write("@0\n");
-    writer.write("M=M+1\n");
+    writeLine("@SP");
+    writeLine("M=M+1");
   }
 
   /**
@@ -68,19 +82,42 @@ public class CodeWriter {
    * @throws IOException if the assembly code cannot be written
    */
   private void decrementStack() throws IOException {
-    writer.write("@0\n");
-    writer.write("M=M-1\n");
+    writeLine("@SP");
+    writeLine("M=M-1");
   }
 
-  // TODO: Fix logic, needs to go to address first, then add index to segment
   /**
-   * Convenience method to get the stack address for the given command.
+   * Writes the assembly code to load the address of the given command to D.
    *
    * @param command the command to get the stack address for
    * @return the stack address as a string
    */
-  private String getStackAddress(CommandType command) {
-    return "@" + Mapping.calcStackAddress(command.arg1(), command.arg2());
+  private void loadAddressToD(CommandType command) throws IOException {
+    // Set of segments that require dynamic memory allocation
+    Set<String> dynamicSegments = Set.of("local", "argument", "this", "that");
+
+    // Set the value of a constant to D directly
+    if (command.arg1().equals("constant")) {
+      writeLine("@" + command.arg2());
+      writeLine("D=A");
+    } else if (dynamicSegments.contains(command.arg1())) {
+      // Save the base address to R13
+      writeLine("@" + Mapping.accessMemory(command.arg1(), command.arg2(), fileBaseName));
+      writeLine("D=M");
+      writeLine("@R13");
+      writeLine("M=D");
+      // Save the index to D
+      writeLine("@" + command.arg2());
+      writeLine("D=A");
+      // Add the index to the base address saved in R13
+      writeLine("@R13");
+      writeLine("D=D+M");
+    } else {
+      // Otherwise simply load the value of the segment[base + index] to D
+      // This applies to static, temp, and pointer segments
+      writeLine("@" + Mapping.accessMemory(command.arg1(), command.arg2(), fileBaseName));
+      writeLine("D=M");
+    }
   }
 
   /**
@@ -89,7 +126,41 @@ public class CodeWriter {
    * @param command the arithmetic command
    */
   public void writeArithmetic(CommandType command) throws IOException {
-    // Existing writeArithmetic logic
+    String arithmeticType = command.typeCommand();
+
+    // Only pop off a single item for unary functions
+    decrementStack();
+    if (arithmeticType.equals("neg")) {
+      writeNeg();
+    } else if (arithmeticType.equals("not")) {
+      writeNot();
+    } else {
+      // Save y to D
+      writeLine("D=M");
+      decrementStack();
+
+      switch (arithmeticType) {
+        case "add":
+          return;
+        default:
+          return;
+      }
+    }
+  }
+
+  // TODO: Implement the following methods
+  /**
+   * Writes the assembly code for the negation command.
+   */
+  private void writeNeg() {
+    return;
+  }
+
+  /**
+   * Writes the assembly code for the not command.
+   */
+  private void writeNot() {
+    return;
   }
 
   /**
@@ -98,11 +169,11 @@ public class CodeWriter {
    * @param command the push or pop command
    */
   public void writePush(CommandType command) throws IOException {
-    writer.write(getStackAddress(command) + "\n");  // @address
-    writer.write("D=M\n");                      // D = *address
-    writer.write("@0\n");                       // A = 0
-    writer.write("A=M\n");                      // A = *0
-    incrementStack();                               // *0++
+    loadAddressToD(command);
+    writeLine("@SP");                      // Go to *SP
+    writeLine("A=M");
+    writeLine("M=D");                      // Push D to stack
+    incrementStack();
   }
 
   /**
@@ -111,11 +182,13 @@ public class CodeWriter {
    * @param command the pop command
    */
   public void writePop(CommandType command) throws IOException {
-    decrementStack();
-    writer.write("A=M\n");                      // A = *0
-    writer.write("D=M\n");                      // D = *A
-    writer.write(getStackAddress(command) + "\n");  // @address
-    writer.write("M=D\n");                      // *address = D
+    loadAddressToD(command);                        // Load the target address to D
+    writeLine("@R13");                       // Save the address temporarily
+    writeLine("M=D");
+    decrementStack();                               // A now points to popped value
+    writeLine("D=M");                      // Load the value to D
+    writeLine("@R13");                     // Set the value at the saved address to D
+    writeLine("M=D");
   }
 
   /**
