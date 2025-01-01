@@ -31,12 +31,10 @@ public class Main {
     // Check that the .vm file path is provided
     if (args.length != 1 || !args[0].endsWith(".vm")) {
       System.out.println("Usage: java n2t.Main 'file.vm'");
-      // return; TODO: debug line
+      // return;
     }
 
-    // String inPath = args[0]; // TODO: Debug line
-    // Debug line
-    String inPath = "C:\\DevFiles\\N2T\\BasicTest\\BasicTest.vm";
+    String inPath = args[0];
 
     Path filePath = Paths.get(inPath);
     String fileName = filePath.getFileName().toString();
