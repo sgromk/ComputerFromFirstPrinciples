@@ -1,7 +1,9 @@
 package n2t;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import n2t.commands.Arithmetic;
 import n2t.commands.CommandCall;
@@ -91,4 +93,60 @@ public class Mapping {
           put("return", CommandReturn::new);
         }
       };
+
+  // A set of all the valid label characters
+  private static final String FUNCTION_CHARS = "abcdefghijklmnopqrstuvwxyz"
+        + "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.";
+
+  // A set of all the valid function name characters
+  private static final String LABEL_CHARS = FUNCTION_CHARS + ":";
+
+  // Create a hash set for function and label characters for more efficient lookup
+  private static final Set<Character> VALID_FUNCTION_CHARS = new HashSet<>();
+
+  static {
+    for (char c : FUNCTION_CHARS.toCharArray()) {
+      VALID_FUNCTION_CHARS.add(c);
+    }
+  }
+
+  private static final Set<Character> VALID_LABEL_CHARS = new HashSet<>();
+
+  static {
+    for (char c : LABEL_CHARS.toCharArray()) {
+      VALID_LABEL_CHARS.add(c);
+    }
+  }
+
+  /**
+   * Checks that all characters in the label are within
+   * the valid label character set.
+   *
+   * @param functionName the name to check
+   * @return true if the label is valid, false otherwise
+   */
+  public static boolean isValidFunction(String functionName) {
+    return isValidName(functionName, VALID_FUNCTION_CHARS);
+  }
+
+  /**
+   * Checks that all characters in the label are within
+   * the valid label character set.
+   *
+   * @param label the label to check
+   * @return true if the label is valid, false otherwise
+   */
+  public static boolean isValidLabel(String label) {
+    return isValidName(label, VALID_LABEL_CHARS);
+  }
+
+  // Checks if all of the characters in the given label are within the given character set
+  private static boolean isValidName(String label, Set<Character> validSet) {
+    for (char c : label.toCharArray()) {
+      if (!validSet.contains(c)) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

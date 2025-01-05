@@ -265,25 +265,41 @@ public class CodeWriter {
    * @param command the label command
    */
   public void writeLabel(CommandType command) throws IOException {
-    // Existing writeLabel logic
+    if (Mapping.isValidLabel(command.arg1())) {
+      writeLine("(" + command.arg1() + ")");
+    } else {
+      throw new IllegalArgumentException("Label contains illegal characters: " + command.arg1());
+    }
   }
 
   /**
    * Writes the assembly code for the given goto command.
    *
+   * <p>Does not check if the label exists in the file.
+   *
    * @param command the goto command
    */
   public void writeGoto(CommandType command) throws IOException {
-    // Existing writeGoto logic
+    writeLine("@" + command.arg1());
+    writeLine("0;JMP");
   }
 
+  // TODO: Check that label exists within same function, uses
+  // method bar in function Foo to jump to Foo$bar
+  // Needs some way to see what the current function is
   /**
    * Writes the assembly code for the given if-goto command.
    *
    * @param command the if command
    */
   public void writeIf(CommandType command) throws IOException {
-    // Existing writeIf logic
+    if (Mapping.isValidLabel(command.arg1())) {
+      decrementStack();         // Decrement the stack pointer
+      writeLine("A=M");    // Go to value at the top of the stack
+      writeLine("D=M");    // Save the value to D
+      writeLine("@" + command.arg1());
+      writeLine("D;JNE");  // Jump if the value is not equal to zero
+    }
   }
 
   /**
