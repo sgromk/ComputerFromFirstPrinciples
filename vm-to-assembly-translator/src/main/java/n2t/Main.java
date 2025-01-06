@@ -32,9 +32,9 @@ public class Main {
   public static void main(String[] args) {
     // Initialize the input file path, base name, output file path, and list of VM files
     String inPathString = "";
-    String fileBaseName = "";
     String outPath = "";
     List<String> vmFiles = new ArrayList<String>();
+    String fileBaseName = "";
 
     // If no file or directory is provided, use the current directory by default
     if (args.length == 0) {
@@ -47,13 +47,11 @@ public class Main {
 
     if (Files.isDirectory(inPath)) {
       // Creating the .asm output file path and base name for label declarations
-      fileBaseName = inPathString;
       outPath = inPathString + ".asm";
       vmFiles = getFileList(inPath);
     } else if (args[0].endsWith(".vm")) {
       // Check that the provided file path ends in .vm then runs translater
-      String fileName = inPath.getFileName().toString();
-      fileBaseName = fileName.substring(0, fileName.lastIndexOf('.'));
+
       vmFiles.add(inPathString);
       // Create the .asm output file path
       outPath = inPathString.replaceAll("\\.\\w+$", ".asm");
@@ -64,23 +62,31 @@ public class Main {
     try {
       // Construct the Parser and CodeWriter
       Parser parser = new Parser();
-      CodeWriter codeWriter = new CodeWriter(outPath, fileBaseName);
+      CodeWriter codeWriter = new CodeWriter(outPath);
+
+      Path currentVmFilePath = null;
+      String currentVmFileString = "";
 
       // Run the translator on each .vm file in the directory,
       // writing the assembly code to the same .asm file
       for (String vmFile : vmFiles) {
         try {
           InputStream is = new FileInputStream(vmFile);
-          Scanner scan = new Scanner(is);
+
+          // Set the CodeWriter's current file name to the current .vm file
+          currentVmFilePath = Paths.get(vmFile);
+          currentVmFileString = currentVmFilePath.getFileName().toString();
+          fileBaseName = currentVmFileString.substring(0, currentVmFileString.lastIndexOf('.'));
+          codeWriter.setCurrentFileName(fileBaseName);
 
           // Iterate over each line of the input file and write the corresponding
           // assembly code to the output file
-          while (scan.hasNextLine()) {
-            String currentLine = scan.nextLine();
-            codeWriter.write(parser.parse(currentLine));
+          try (Scanner scan = new Scanner(is)) {
+            while (scan.hasNextLine()) {
+              String currentLine = scan.nextLine();
+              codeWriter.write(parser.parse(currentLine));
+            }
           }
-          scan.close();
-          
         } catch (Exception e) {
           System.out.println("Error translating file " + vmFile + ": " + e);
         }

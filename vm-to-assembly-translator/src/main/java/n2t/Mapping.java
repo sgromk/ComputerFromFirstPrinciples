@@ -99,7 +99,7 @@ public class Mapping {
         + "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.";
 
   // A set of all the valid function name characters
-  private static final String LABEL_CHARS = FUNCTION_CHARS + ":";
+  private static final String LABEL_CHARS = FUNCTION_CHARS + ":$";
 
   // Create a hash set for function and label characters for more efficient lookup
   private static final Set<Character> VALID_FUNCTION_CHARS = new HashSet<>();

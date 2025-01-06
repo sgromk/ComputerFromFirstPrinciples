@@ -16,15 +16,35 @@ import n2t.commands.CommandType;
  * the original line of VM code.
  */
 public class CodeWriter {
-  FileWriter writer;
-  String fileBaseName;
-  int logicalCounter;
+  private final FileWriter writer;
+  private String fileBaseName;
+  private int logicalCounter;
+  private int callCounter;
 
-  CodeWriter(String outPath, String fileBaseName) throws IOException {
+  CodeWriter(String outPath) throws IOException {
     this.writer = new FileWriter(outPath);
-    this.fileBaseName = fileBaseName;
+    this.fileBaseName = "";
     this.logicalCounter = 0;
+    this.callCounter = 0;
   } 
+
+  /**
+   * Sets the current file name to the given file name.
+   *
+   * @param givenFileName the name of the current file
+   */
+  public void setCurrentFileName(String givenFileName) {
+    fileBaseName = givenFileName;
+  }
+
+  /**
+   * Writes the assembly code to initialize the VM.
+   *
+   * @throws IOException if the assembly code cannot be written
+   */
+  public void writeInit() throws IOException {
+    // Bootstrap code to initialize the VM
+  }
 
   /**
    * Writes the assembly code corresponding to each VM command element
@@ -262,6 +282,9 @@ public class CodeWriter {
   /**
    * Writes the assembly code for the given label command.
    *
+   * <p>{@code currentFunctionName} defines the scope of the label,
+   * global labels have an empty String
+   *
    * @param command the label command
    */
   public void writeLabel(CommandType command) throws IOException {
@@ -284,21 +307,21 @@ public class CodeWriter {
     writeLine("0;JMP");
   }
 
-  // TODO: Check that label exists within same function, uses
-  // method bar in function Foo to jump to Foo$bar
-  // Needs some way to see what the current function is
   /**
    * Writes the assembly code for the given if-goto command.
    *
    * @param command the if command
    */
   public void writeIf(CommandType command) throws IOException {
+    // Label contains only valid characters
     if (Mapping.isValidLabel(command.arg1())) {
       decrementStack();         // Decrement the stack pointer
       writeLine("A=M");    // Go to value at the top of the stack
       writeLine("D=M");    // Save the value to D
       writeLine("@" + command.arg1());
       writeLine("D;JNE");  // Jump if the value is not equal to zero
+    } else {
+      throw new IllegalArgumentException("Label contains illegal characters: " + command.arg1());
     }
   }
 
@@ -307,8 +330,12 @@ public class CodeWriter {
    *
    * @param command the function command
    */
-  public void writeFunction(CommandType command) throws IOException{
-    // Existing writeFunction logic
+  public void writeFunction(CommandType command) throws IOException {
+    writeLabel(Mapping.getCommand(new String[]{"label", command.arg1()}));
+    for (int i = 0; i < Integer.parseInt(command.arg2()); i++) {
+      // Initialize 0s for local variables
+      writePush(Mapping.getCommand(new String[]{"push", "0"}));
+    }
   }
 
   /**
@@ -326,6 +353,38 @@ public class CodeWriter {
    * @param command the return command
    */
   public void writeCall(CommandType command) throws IOException {
-    // Existing writeCall logic
+    // Create the return address
+    String returnAddress = command.arg1() + "$ret" + callCounter;
+    callCounter++;
+    // Push the return address
+    writeLine("@" + returnAddress);
+    writeLine("D=A");
+    writeLine("@SP");
+    writeLine("A=M");
+    writeLine("M=D");
+    incrementStack();
+
+    // Push LCL, ARG, THIS, THAT
+    writePush(Mapping.getCommand(new String[]{"push", "LCL"}));
+    writePush(Mapping.getCommand(new String[]{"push", "ARG"}));
+    writePush(Mapping.getCommand(new String[]{"push", "this"}));
+    writePush(Mapping.getCommand(new String[]{"push", "that"}));
+
+    // Move the stack pointer back 5 + nArgs positions
+    writeLine("@SP");
+    writeLine("D=M");
+    writeLine("@" + (5 + Integer.parseInt(command.arg2())));
+    writeLine("D=D-A");
+    writeLine("@ARG");
+    writeLine("M=D");
+
+    // Set LCL to SP
+    writeLine("@SP");
+    writeLine("D=M");
+    writeLine("@LCL");
+    writeLine("M=D");
+
+    // Write the return label
+    writeLine("(" + returnAddress + ")");
   }
 }
