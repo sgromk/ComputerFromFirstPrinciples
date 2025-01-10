@@ -26,6 +26,7 @@ public class CodeWriter {
     this.fileBaseName = "";
     this.logicalCounter = 0;
     this.callCounter = 0;
+    writeInit();
   } 
 
   /**
@@ -38,12 +39,20 @@ public class CodeWriter {
   }
 
   /**
-   * Writes the assembly code to initialize the VM.
+   * Writes the bootstrap assembly code to initialize the VM.
    *
    * @throws IOException if the assembly code cannot be written
    */
   public void writeInit() throws IOException {
-    // Bootstrap code to initialize the VM
+    // Sets the stack pointer to 256
+    writeLine("// Bootstrap");
+    writeLine("@256");
+    writeLine("D=A");
+    writeLine("@SP");
+    writeLine("M=D");
+    writeLine("");
+    writeLine("// Call Sys.init");
+    writeCall(Mapping.getCommand(new String[]{"call", "Sys.init", "0"}));
   }
 
   /**
@@ -305,6 +314,7 @@ public class CodeWriter {
   public void writeGoto(CommandType command) throws IOException {
     writeLine("@" + command.arg1());
     writeLine("0;JMP");
+    writeLine("");
   }
 
   /**
@@ -323,6 +333,7 @@ public class CodeWriter {
     } else {
       throw new IllegalArgumentException("Label contains illegal characters: " + command.arg1());
     }
+    writeLine("");
   }
 
   /**
@@ -334,8 +345,9 @@ public class CodeWriter {
     writeLabel(Mapping.getCommand(new String[]{"label", command.arg1()}));
     for (int i = 0; i < Integer.parseInt(command.arg2()); i++) {
       // Initialize 0s for local variables
-      writePush(Mapping.getCommand(new String[]{"push", "0"}));
+      writePush(Mapping.getCommand(new String[]{"push", "constant", "0"}));
     }
+    writeLine("");
   }
 
   /**
@@ -344,7 +356,35 @@ public class CodeWriter {
    * @param command the call command
    */
   public void writeReturn(CommandType command) throws IOException {
-    // Existing writeReturn logic
+    writeLine("@LCL");  // Save LCL to D
+    writeLine("D=M");
+    writeLine("@10");    // Store endFrame in temp 5
+    writeLine("M=D");
+    writeLine("@5");
+    writeLine("D=D-A"); // Save the endFrame - 5
+    writeLine("A=D");
+    writeLine("D=M");
+    writeLine("@11");    // Store the return address in temp 6
+    writeLine("M=D");
+
+    // Pop the top value of the stack and place it in ARG
+    writePop(Mapping.getCommand(new String[]{"pop", "argument", "0"}));
+
+    // Set SP to ARG + 1
+    writeLine("@ARG");
+    writeLine("D=M");
+    writeLine("@SP");
+    writeLine("M=D+1");
+
+    // Reset THAT, THIS, ARG, LCL
+    resetAllPointers();
+
+    // Jump to return address
+    writeLine("@11");
+    writeLine("A=M");
+    writeLine("0;JMP");
+
+    writeLine("");
   }
 
   /**
@@ -354,8 +394,8 @@ public class CodeWriter {
    */
   public void writeCall(CommandType command) throws IOException {
     // Create the return address
-    String returnAddress = command.arg1() + "$ret" + callCounter;
     callCounter++;
+    String returnAddress = command.arg1() + "$ret" + callCounter;
     // Push the return address
     writeLine("@" + returnAddress);
     writeLine("D=A");
@@ -363,12 +403,11 @@ public class CodeWriter {
     writeLine("A=M");
     writeLine("M=D");
     incrementStack();
+    writeLine("");
+
 
     // Push LCL, ARG, THIS, THAT
-    writePush(Mapping.getCommand(new String[]{"push", "LCL"}));
-    writePush(Mapping.getCommand(new String[]{"push", "ARG"}));
-    writePush(Mapping.getCommand(new String[]{"push", "this"}));
-    writePush(Mapping.getCommand(new String[]{"push", "that"}));
+    pushAllPointers();
 
     // Move the stack pointer back 5 + nArgs positions
     writeLine("@SP");
@@ -384,7 +423,46 @@ public class CodeWriter {
     writeLine("@LCL");
     writeLine("M=D");
 
+    // Goto functionName
+    writeGoto(Mapping.getCommand(new String[]{"goto", command.arg1()}));
+
     // Write the return label
     writeLine("(" + returnAddress + ")");
+
+    writeLine("");
+  }
+
+  private void pushAllPointers() throws IOException {
+    enum Pointers {
+      LCL, ARG, THIS, THAT
+    }
+
+    for (Pointers pointer : Pointers.values()) {
+      writeLine("// Push " + pointer);
+      writeLine("@" + pointer);
+      writeLine("D=M");
+      writeLine("@SP");  // Go to *SP
+      writeLine("A=M");
+      writeLine("M=D");  // Push D to stack
+      incrementStack();
+      writeLine("");     // Empty line following command
+    }
+  }
+
+  private void resetAllPointers() throws IOException {
+    enum Pointers {
+      THAT, THIS, ARG, LCL
+    }
+
+    for (Pointers pointer : Pointers.values()) {
+      writeLine("");
+      writeLine("// Reset " + pointer);
+      writeLine("@10");    // Go to endFrame in temp 5
+      writeLine("M=M-1");
+      writeLine("A=M");
+      writeLine("D=M");
+      writeLine("@" + pointer);
+      writeLine("M=D");
+    }
   }
 }

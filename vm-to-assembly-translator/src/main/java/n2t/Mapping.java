@@ -87,7 +87,7 @@ public class Mapping {
           put("pop", Pop::new);
           put("label", Label::new);
           put("goto", Goto::new);
-          put("if", CommandIf::new);
+          put("if-goto", CommandIf::new);
           put("function", CommandFunction::new);
           put("call", CommandCall::new);
           put("return", CommandReturn::new);
